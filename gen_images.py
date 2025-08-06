@@ -11,7 +11,7 @@ import PIL.Image
 import torch
 from training.volumetric_rendering import sample_camera_positions, create_cam2world_matrix
 import legacy
-from dnnlib.seg_tools import *
+from dnnlib.seg_tools import mask2color
 
 #----------------------------------------------------------------------------
 

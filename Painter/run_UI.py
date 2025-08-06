@@ -1,24 +1,25 @@
-from fileinput import filename
-import sys, argparse
-from cv2 import normalize
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-import cv2
-import torch
-import qdarkstyle
-import numpy as np
+import argparse
 import datetime
-import pickle,time
-from PIL import Image
-import os
-import math
-import time
 import json
+import math
+import os
 import pickle
+import sys
+import time
+from pathlib import Path
+
+import cv2
+import numpy as np
+import qdarkstyle
+import torch
+from PIL import Image
+from PyQt5.QtCore import QCoreApplication, QDir, Qt, QSize
+from PyQt5.QtGui import QColor, QImage, QPixmap
+from PyQt5.QtWidgets import (QApplication, QColorDialog, QFileDialog,
+                             QGraphicsScene, QMainWindow, QMessageBox, QWidget)
 from torchvision import transforms, utils
 
-sys.path.append('D:/projects/IDE-3D')
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 import dnnlib
 import legacy
 from inversion.BiSeNet import BiSeNet
@@ -73,7 +74,8 @@ class Ex(QWidget, Ui_Form):
         self.fov = 18
         self.traj_type = 'orbit'
         self.trajectory = self.set_trajectory()
-        with open('D:/projects/IDE-3D/data/ffhq/images512x512/dataset.json', 'rb') as f:
+        dataset_path = Path(__file__).resolve().parents[1] / 'data/ffhq/images512x512/dataset.json'
+        with open(dataset_path, 'rb') as f:
             labels = json.load(f)['labels']
         self.labels = dict(labels)
         self.label = torch.load(args.target_label) if args.target_label is not None else None

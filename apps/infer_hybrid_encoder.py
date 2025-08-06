@@ -33,7 +33,7 @@ from inversion.BiSeNet import BiSeNet
 from training.volumetric_rendering import sample_camera_positions, create_cam2world_matrix
 from inversion.criteria.lpips.lpips import LPIPS
 from inversion.criteria import id_loss as IDLoss
-from dnnlib.seg_tools import *
+from dnnlib.seg_tools import mask2label_np, face_parsing, mask2color, parsing_img
 
     
 def requires_grad(model, flag=True):

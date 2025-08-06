@@ -23,7 +23,9 @@ from torch.overrides import is_tensor_method_or_property
 from einops import repeat
 
 import sys
-sys.path.append('D:/projects/IDE-3D')
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 from dnnlib import camera, util, geometry
 from torch_utils import misc
 from torch_utils import persistence

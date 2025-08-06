@@ -593,10 +593,8 @@ def sample_from_triplane(coordinates, grid):
 
     xz_grid = coordinates[..., [0,2]]
     xz_feature = sample_from_2dgrid(xz_grid, grid[:, 2])
-    
-    # TODO: replace add with concatenation
-    return xy_feature + yz_feature + xz_feature
-    # return torch.cat([xy_feature, yz_feature, xz_feature], dim=1)
+
+    return torch.cat([xy_feature, yz_feature, xz_feature], dim=-1)
 
 
 def sample_from_2dgrid(coordinates, grid):
