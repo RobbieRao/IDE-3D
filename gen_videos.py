@@ -17,7 +17,7 @@ import legacy
 
 from training.volumetric_rendering import LookAtPoseSampler
 from torch_utils import misc
-from dnnlib.seg_tools import *
+from dnnlib.seg_tools import mask2color
 
 #----------------------------------------------------------------------------
 

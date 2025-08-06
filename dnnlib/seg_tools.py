@@ -5,8 +5,6 @@ from PIL import Image
 import torch.nn.functional as F
 from torchvision import transforms, utils
 
-import sys
-sys.path.append('D:/projects/eg3d')
 from inversion.BiSeNet import BiSeNet
 
 

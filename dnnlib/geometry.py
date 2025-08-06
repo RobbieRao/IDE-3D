@@ -1,11 +1,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
 
-import torch
-import torch.nn.functional as F
+import logging
 import math
 import random
+
 import numpy as np
+import torch
+import torch.nn.functional as F
 
 
 def positional_encoding(p, size, pe='normal', use_pos=False):
@@ -24,7 +26,6 @@ def positional_encoding(p, size, pe='normal', use_pos=False):
 
 
 def upsample(img_nerf, size, filter=None):
-    # debug: 128 // 65 = 1 so the dim of img_nerf is wrong
     up = size // img_nerf.size(-1)
     if up <= 1 and filter:
         return img_nerf
@@ -281,7 +282,7 @@ def get_sigma_field_np(nerf, styles, resolution=512, block_resolution=64):
 def extract_geometry(nerf, styles, resolution, threshold):
     import mcubes
 
-    print('threshold: {}'.format(threshold))
+    logging.info('threshold: %s', threshold)
     u, bound = get_sigma_field_np(nerf, styles, resolution)
     vertices, triangles = mcubes.marching_cubes(u, threshold)
     b_min_np = np.array([-bound, -bound, -bound])
@@ -328,9 +329,7 @@ def render_mesh(meshes, camera_matrices, render_noise=True):
             rasterizer = MeshRasterizer(cameras=cameras, raster_settings=raster_settings)
             pix_to_face, zbuf, bary_coord, dists = rasterizer(mesh)
             color = interpolate_face_attributes(pix_to_face, bary_coord, face_vert_noise).squeeze()
-
-            # hack
-            color[offset:, offset:] = color[:-offset, :-offset]
+            color = torch.roll(color, shifts=(-offset, -offset), dims=(0, 1))
             _colors += [color]
         color = torch.stack(_colors, 0).permute(0,3,1,2)
         colors += [color]

@@ -12,9 +12,17 @@ from . import optimizer
 from . import tfutil
 from . import custom_ops
 
-from .tfutil import *
 from .network import Network
-
 from .optimizer import Optimizer
-
 from .custom_ops import get_plugin
+
+__all__ = [
+    'autosummary',
+    'network',
+    'optimizer',
+    'tfutil',
+    'custom_ops',
+    'Network',
+    'Optimizer',
+    'get_plugin',
+]

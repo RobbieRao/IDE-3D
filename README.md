@@ -15,13 +15,38 @@ Abstract: *Existing 3D-aware facial generation methods face a dilemma in quality
 
 ## Installation
 
-- ```git clone --recursive https://github.com/MrTornado24/IDE-3D.git ```
-- ```cd IDE-3D```
-- ```conda env create -f environment.yml```
+```bash
+git clone --recursive https://github.com/MrTornado24/IDE-3D.git
+cd IDE-3D
+conda env create -f environment.yml
+conda activate ide3d
+```
 
-## Getting started
+Download the pre-trained checkpoints from [Google Drive](https://drive.google.com/drive/folders/1-i1WLR5YCXOKjNuQEB6ECf-JxMyvqC4l?usp=sharing) and place them into `pretrained_models/`. The archive includes the generator `ide3d-ffhq-64-512.pkl` and the style encoder `encoder-base-hybrid.pkl`.
 
-Please download our pre-trained checkpoints from [link](https://drive.google.com/drive/folders/1-i1WLR5YCXOKjNuQEB6ECf-JxMyvqC4l?usp=sharing) and put them under `pretrained_models/`. The link mainly contains the pretrained generator `ide3d-ffhq-64-512.pkl` and the style encoder `encoder-base-hybrid.pkl`. More pretrianed models will be released soon. 
+## Quick start
+
+Generate a few example images:
+
+```bash
+python gen_images.py --outdir=out --trunc=0.7 --seeds=0-3 \
+    --network=pretrained_models/ide3d-ffhq-64-512.pkl
+```
+
+Create an interpolation video with semantic masks:
+
+```bash
+python gen_videos.py --outdir=out --trunc=0.7 --seeds=0-3 --grid=1x1 \
+    --network=pretrained_models/ide3d-ffhq-64-512.pkl --interpolate 1 --image_mode image_seg
+```
+
+Launch the interactive UI (after installing `Painter/requirements.txt`):
+
+```bash
+python Painter/run_ui.py \
+    --g_ckpt pretrained_models/ide3d-ffhq-64-512.pkl \
+    --e_ckpt pretrained_models/encoder-base-hybrid.pkl
+```
 
 
 ## Semantic-aware image synthesis
