@@ -51,33 +51,14 @@ python Painter/run_ui.py \
 
 ## Semantic-aware image synthesis
 
-```.bash
-# Generate videos using pre-trained model
+You can also extract 3D shapes and render meshes using the pretrained model:
 
-python gen_videos.py --outdir=out --trunc=0.7 --seeds=0-3 --grid=2x2 \
-    --network=pretrained_models/ide3d-ffhq-64-512.pkl --interpolate 1 --image_mode image_seg
-
-# Generate the same 4 seeds in an interpolation sequence
-
-python gen_videos.py --outdir=out --trunc=0.7 --seeds=0-3 --grid=1x1 \
-    --network=pretrained_models/ide3d-ffhq-64-512.pkl --interpolate 1 --image_mode image_seg
-```
-
-```.bash
-# Generate images using pre-trained model
-
-python gen_images.py --outdir=out --trunc=0.7 --seeds=0-3 \
-    --network=pretrained_models/ide3d-ffhq-64-512.pkl
-```
-
-```.bash
-# Extract shapes (saved as .mrc and .npy) using pre-trained model
-
+```bash
+# Extract shapes (saved as .mrc and .npy)
 python extract_shapes.py --outdir out --trunc 0.7 --seeds 0-3 \
-    --network networks/network_snapshot.pkl --cube_size 1 
-    
-# Render meshes to video
+    --network networks/network_snapshot.pkl --cube_size 1
 
+# Render meshes to video
 python render_mesh.py --fname out/0.npy --outdir out
 ```
 
@@ -90,7 +71,7 @@ We visualize our .mrc shape files with [UCSF Chimerax](https://www.cgl.ucsf.edu/
 
 We provide an interactive tool that can be used for 3D-aware face drawing and editng in real-time. Before using it, please install the enviroment with `pip install -r ./Painter/requirements.txt`.
 
-```.bash
+```bash
 python Painter/run_ui.py
     --g_ckpt pretrained_models/ide3d-ffhq-64-512.pkl 
     --e_ckpt pretrained_models/encoder-base-hybrid.pkl
@@ -123,7 +104,7 @@ python preprocess_in_the_wild.py --indir=INPUT_IMAGE_FOLDER
 
 IDE-3D supports 3D-aware real protrait image editing using our interactive tool. Please run the following commands: 
 
-```.bash
+```bash
 # infer latent code as initialization
 
 python apps/infer_hybrid_encoder.py 
@@ -134,7 +115,7 @@ python apps/infer_hybrid_encoder.py
 ```
 The above command would return `rec_ws.pt` under `out/img_0`.
 
-```.bash
+```bash
 # run pti
 
 python inversion/scripts/run_pti.py 
@@ -151,7 +132,7 @@ python inversion/scripts/run_pti.py
 ```
 We adopt [PTI](https://github.com/danielroich/PTI) for 3D inverison. Before running, please place the images into `examples/`. You can pass Flag `ide3d_plus` or `ide3d` to choose different inversion types ('w' and 'w+'). Flag `initial_w` specifies the latent code obtained from the last step. It benefits more reasonable shape especially for images with steep viewing angles. The command would return pose label `label.pt`, reconstructed latent code `latent.pt`, finetuned generator and some visualizations.
 
-```.bash
+```bash
 # (optional) finetune encoder
 
 python apps/finetune_hybrid_encoder.py
@@ -166,7 +147,7 @@ python apps/finetune_hybrid_encoder.py
 ```
 This step is to align the shapes reconstructed by encoders and PTI. The finetuned encoder would be saved as `finetuned_encoder.pkl`. Besides, a semantic mask `mask.png` would be saved under the same folder.  
 
-```.bash
+```bash
 # run UI
 
 python Painter/run_ui.py
@@ -183,7 +164,7 @@ python Painter/run_ui.py
 
 Please obtain the adapted generators following [IDE3D-NADA](https://github.com/MrTornado24/ide3d-nada/blob/main/README.md). You can perform interactive editing in other domains by simply replacing the original generator by the adapted one:
 
-```.bash
+```bash
 python Painter/run_ui.py
     --g_ckpt /path/to/adapted_generator.pt
     --e_ckpt pretrained_models/encoder-base-hybrid.pkl
@@ -195,7 +176,7 @@ python Painter/run_ui.py
 
 IDE-3D supports animating stylized virtual faces through semantic masks. Please process a video clip and prepare a `dataset.json`. Then run:
 
-```.bash
+```bash
 
 python apps/infer_face_animation.py 
     --drive_root /path/to/images
