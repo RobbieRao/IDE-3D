@@ -1,9 +1,10 @@
 from audioop import cross
-from email.policy import default
 from genericpath import isfile
 from random import random
 import sys
-sys.path.append('D:/projects/IDE-3D')
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 import os
 import numpy as np
 import torch

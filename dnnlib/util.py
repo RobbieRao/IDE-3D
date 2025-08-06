@@ -35,7 +35,6 @@ from PIL import Image
 from tqdm import tqdm
 from distutils.util import strtobool
 from typing import Any, List, Tuple, Union
-sys.path.append('D:/projects/eg3d')
 from torch_utils.ops.grid_sample_gradfix import grid_sample
 
 

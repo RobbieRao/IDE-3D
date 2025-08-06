@@ -64,7 +64,6 @@ def sample_generator_ide3d(generator, ws, c, max_batch=100000, voxel_resolution=
     
     with torch.no_grad():
         # mapping latent codes into W space
-        # TODO: compute nerf input
         voxel_block_ws = []
         block_ws = []
         with torch.autograd.profiler.record_function('split_ws'):

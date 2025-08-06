@@ -1,8 +1,7 @@
 
 import cv2
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QDialog, QGraphicsScene
 
 import numpy as np
 from datetime import datetime

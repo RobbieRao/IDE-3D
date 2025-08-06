@@ -1,4 +1,3 @@
-from email.policy import default
 from random import random
 import os
 import numpy as np
@@ -24,7 +23,9 @@ from tqdm import tqdm
 from tensorboardX import SummaryWriter
 
 import sys
-sys.path.append('D:/projects/IDE-3D')
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 from torch_utils.ops import conv2d_gradfix
 from torch_utils import misc
 import dnnlib

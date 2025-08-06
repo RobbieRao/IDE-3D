@@ -1,5 +1,4 @@
 from ctypes import util
-from email.policy import default
 from random import choice, randrange
 from re import L
 from string import ascii_uppercase
@@ -22,7 +21,8 @@ import argparse
 
 import torchvision.utils as utils
 
-sys.path.append('D:/projects/IDE-3D/inversion')
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 from configs import global_config, paths_config
 from training.coaches.multi_id_coach import MultiIDCoach
 from training.coaches.single_id_coach import SingleIDCoach
