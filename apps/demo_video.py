@@ -3,7 +3,9 @@
 import gradio as gr
 import numpy as np
 import sys
-sys.path.append('C:/Users/admin/projects/StyleNeRF')
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 import dnnlib
 import time
 import legacy
@@ -28,11 +30,13 @@ def set_random_seed(seed):
 
 
 def get_camera_traj(model, pitch, yaw, fov=12, batch_size=1, model_name='FFHQ512'):
+    """Compute camera trajectory for a given model."""
     gen = model.synthesis
     range_u, range_v = gen.C.range_u, gen.C.range_v
-    if not (('car' in model_name) or ('Car' in model_name)):  # TODO: hack, better option?
-        yaw, pitch = 0.5 * yaw, 0.3  * pitch
-        pitch = pitch + np.pi/2
+    is_car = 'car' in model_name.lower()
+    if not is_car:
+        yaw, pitch = 0.5 * yaw, 0.3 * pitch
+        pitch += np.pi / 2
         u = (yaw - range_u[0]) / (range_u[1] - range_u[0])
         v = (pitch - range_v[0]) / (range_v[1] - range_v[0])
     else:
@@ -76,23 +80,13 @@ def get_model(network_pkl):
 
     print('compile and go through the initial image')
     G2 = G2.eval()
-    
+
     init_z = torch.from_numpy(np.random.RandomState(0).rand(1, G2.z_dim)).to(device)
     init_cam = get_camera_traj(G2, 0, 0, model_name=network_pkl)
     dummy = G2(z=init_z, c=None, camera_matrices=init_cam, render_option=render_option, theta=0)
     res = dummy['img'].shape[-1]
     imgs = [None, None]
     return G2, res, imgs
-
-
-global_states = list(get_model(check_name()))
-wss  = [None, None]
-
-def proc_seed(history, seed):
-    if isinstance(seed, str):
-        seed = 0
-    else:
-        seed = int(seed)
 
 def stack_imgs(imgs):
     img = torch.stack(imgs, dim=2)
@@ -104,19 +98,24 @@ def proc_img(img):
 def f_synthesis(model_name, program, model_find, trunc, seed1, seed2, mix1, mix2, roll, fov):
     history = gr.get_state() or {}
     seeds = []
-    
+
     if model_find != "":
         model_name = model_find
 
     model_name = check_name(model_name)
-    if model_name != history.get("model_name", None):
+    if ('model' not in history) or (model_name != history.get('model_name')):
         model, res, imgs = get_model(model_name)
-        global_states[0] = model
-        global_states[1] = res
-        global_states[2] = imgs
+        history['model'] = model
+        history['res'] = res
+        history['imgs'] = imgs
+        history['wss'] = [None, None]
 
-    model, res, imgs = global_states
-    if program  == 'image':
+    model = history['model']
+    res = history['res']
+    imgs = history['imgs']
+    wss = history['wss']
+
+    if program == 'image':
         program = 'rotation_camera3'
     elif program == 'image+normal':
         program = 'rotation_both'
@@ -127,7 +126,7 @@ def f_synthesis(model_name, program, model_find, trunc, seed1, seed2, mix1, mix2
             seed = 0
         else:
             seed = int(seed)
-        
+
         if (seed != history.get(f'seed{idx}', -1)) or \
             (model_name != history.get("model_name", None)) or \
             (trunc != history.get("trunc", 0.7)) or \
@@ -135,34 +134,33 @@ def f_synthesis(model_name, program, model_find, trunc, seed1, seed2, mix1, mix2
             print(f'use seed {seed}')
             set_random_seed(seed)
             with torch.no_grad():
-                z   = torch.from_numpy(np.random.RandomState(int(seed)).randn(1, model.z_dim).astype('float32')).to(device)
-                ws  = model.mapping(z=z, c=None, truncation_psi=trunc)
+                z = torch.from_numpy(np.random.RandomState(int(seed)).randn(1, model.z_dim).astype('float32')).to(device)
+                ws = model.mapping(z=z, c=None, truncation_psi=trunc)
                 imgs[idx] = [proc_img(i) for i in renderer(styles=ws, render_option=render_option)]
-                ws  = ws.detach().cpu().numpy()
-            wss[idx]  = ws
+                ws = ws.detach().cpu().numpy()
+            wss[idx] = ws
         else:
             seed = history[f'seed{idx}']
-        
+
         seeds += [seed]
         history[f'seed{idx}'] = seed
 
     history['trunc'] = trunc
     history['model_name'] = model_name
+    history['wss'] = wss
     gr.set_state(history)
     set_random_seed(sum(seeds))
 
-    # style mixing (?)
     ws1, ws2 = [torch.from_numpy(ws).to(device) for ws in wss]
     ws = ws1.clone()
     ws[:, :8] = ws1[:, :8] * mix1 + ws2[:, :8] * (1 - mix1)
     ws[:, 8:] = ws1[:, 8:] * mix2 + ws2[:, 8:] * (1 - mix2)
 
-    
     dirpath = tempfile.mkdtemp()
     start_t = time.time()
     with torch.no_grad():
-        outputs  = [proc_img(i) for i in renderer(
-            styles=ws.detach(), 
+        outputs = [proc_img(i) for i in renderer(
+            styles=ws.detach(),
             theta=roll * np.pi,
             render_option=render_option)]
         all_imgs = [imgs[0], outputs, imgs[1]]

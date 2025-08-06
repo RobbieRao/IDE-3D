@@ -415,7 +415,7 @@ class SynthesisLayer(torch.nn.Module):
 
         self.magnitude_ema_beta = magnitude_ema_beta
         if magnitude_ema_beta > 0:
-            self.register_buffer('w_avg', torch.ones([]))  # TODO: name for compitibality
+            self.register_buffer('w_avg', torch.ones([]))  # Used for compatibility
 
     def forward(self, x, w, noise_mode='random', fused_modconv=True, gain=1, skip_up=False, input_noise=None, **unused_kwargs):
         assert noise_mode in ['random', 'const', 'none']
@@ -1244,7 +1244,7 @@ class Generator(torch.nn.Module):
     def forward(self, z=None, c=None, styles=None, truncation_psi=1, truncation_cutoff=None, img=None, **synthesis_kwargs):
         if styles is None:
             assert z is not None
-            if (self.encoder is not None) and (img is not None):  #TODO: debug
+            if (self.encoder is not None) and (img is not None):
                 outputs = self.encoder(img)
                 ws = outputs['ws']
                 if ('camera' in outputs) and ('camera_mode' not in synthesis_kwargs):

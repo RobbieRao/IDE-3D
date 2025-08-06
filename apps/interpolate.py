@@ -18,7 +18,9 @@ from typing import List
 import click
 from numpy.lib.function_base import interp
 import sys
-sys.path.append('C:/Users/admin/projects/StyleNeRF')
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 import dnnlib
 import numpy as np
 import PIL.Image
@@ -29,12 +31,11 @@ import legacy
 #----------------------------------------------------------------------------
 
 def num_range(s: str) -> List[int]:
-    '''Accept either a comma separated list of numbers 'a,b,c' or a range 'a-c' and return as a list of ints.'''
-    print(s)
+    """Accept either a comma separated list of numbers 'a,b,c' or a range 'a-c' and return as a list of ints."""
     range_re = re.compile(r'^(\d+)-(\d+)$')
     m = range_re.match(s)
     if m:
-        return list(range(int(m.group(1)), int(m.group(2))+1))
+        return list(range(int(m.group(1)), int(m.group(2)) + 1))
     vals = s.split(',')
     return [int(x) for x in vals]
 
@@ -109,15 +110,13 @@ def interpolate(v0, v1, n_steps, interp_type='spherical', smooth=False):
         # https://math.stackexchange.com/a/1142755
         t_array = t_array**2 * (3 - 2 * t_array)
     
-    # TODO: no need of a for loop; this can be optimized using the fact that they're numpy arrays!
-    vectors = list()
-    for t in t_array:
-        if interp_type == 'linear':
-            v = lerp(t, v0, v1)
-        elif interp_type == 'spherical':
-            v = slerp(t, v0, v1)
-        vectors.append(v)
-    
+    if interp_type == 'linear':
+        vectors = lerp(t_array, v0, v1)
+    elif interp_type == 'spherical':
+        vectors = np.array([slerp(t, v0, v1) for t in t_array])
+    else:
+        raise ValueError(f"Unknown interp_type {interp_type}")
+
     return np.asarray(vectors)
 
 #----------------------------------------------------------------------------

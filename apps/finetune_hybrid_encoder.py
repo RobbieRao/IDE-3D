@@ -1,4 +1,3 @@
-from email.policy import default
 from random import random
 import sys
 import os
@@ -24,7 +23,8 @@ from tqdm import tqdm
 from typing import List, Optional, Tuple, Union
 from tensorboardX import SummaryWriter
 
-sys.path.append('D:/projects/IDE-3D')
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 import dnnlib
 import legacy
 from torch.utils import data

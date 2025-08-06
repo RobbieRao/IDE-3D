@@ -22,11 +22,13 @@ def set_random_seed(seed):
 
 
 def get_camera_traj(model, pitch, yaw, fov=12, batch_size=1, model_name='FFHQ512'):
+    """Compute camera trajectory for a given model."""
     gen = model.synthesis
     range_u, range_v = gen.C.range_u, gen.C.range_v
-    if not (('car' in model_name) or ('Car' in model_name)):  # TODO: hack, better option?
-        yaw, pitch = 0.5 * yaw, 0.3  * pitch
-        pitch = pitch + np.pi/2
+    is_car = 'car' in model_name.lower()
+    if not is_car:
+        yaw, pitch = 0.5 * yaw, 0.3 * pitch
+        pitch += np.pi / 2
         u = (yaw - range_u[0]) / (range_u[1] - range_u[0])
         v = (pitch - range_v[0]) / (range_v[1] - range_v[0])
     else:
@@ -78,31 +80,26 @@ def get_model(network_pkl, render_option=None):
     return G2, res, imgs
 
 
-global_states = list(get_model(check_name()))
-wss  = [None, None]
-
-def proc_seed(history, seed):
-    if isinstance(seed, str):
-        seed = 0
-    else:
-        seed = int(seed)
-
-
 def f_synthesis(model_name, model_find, render_option, trunc, seed1, seed2, mix1, mix2, yaw, pitch, roll, fov):
     history = gr.get_state() or {}
     seeds = []
-    
+
     if model_find != "":
         model_name = model_find
 
     model_name = check_name(model_name)
-    if model_name != history.get("model_name", None):
+    if ('model' not in history) or (model_name != history.get('model_name')):
         model, res, imgs = get_model(model_name, render_option)
-        global_states[0] = model
-        global_states[1] = res
-        global_states[2] = imgs
+        history['model'] = model
+        history['res'] = res
+        history['imgs'] = imgs
+        history['wss'] = [None, None]
 
-    model, res, imgs = global_states
+    model = history['model']
+    res = history['res']
+    imgs = history['imgs']
+    wss = history['wss']
+
     for idx, seed in enumerate([seed1, seed2]):
         if isinstance(seed, str):
             seed = 0
@@ -115,28 +112,27 @@ def f_synthesis(model_name, model_find, render_option, trunc, seed1, seed2, mix1
             (wss[idx] is None):
             print(f'use seed {seed}')
             set_random_seed(seed)
-            z   = torch.from_numpy(np.random.RandomState(int(seed)).randn(1, model.z_dim).astype('float32')).to(device)
-            ws  = model.mapping(z=z, c=None, truncation_psi=trunc)
+            z = torch.from_numpy(np.random.RandomState(int(seed)).randn(1, model.z_dim).astype('float32')).to(device)
+            ws = model.mapping(z=z, c=None, truncation_psi=trunc)
             img = model.get_final_output(styles=ws, camera_matrices=get_camera_traj(model, 0, 0), render_option=render_option)
-            ws  = ws.detach().cpu().numpy()
-            img = img[0].permute(1,2,0).detach().cpu().numpy()
+            ws = ws.detach().cpu().numpy()
+            img = img[0].permute(1, 2, 0).detach().cpu().numpy()
 
-            
             imgs[idx * res // 2: (1 + idx) * res // 2] = cv2.resize(
                 np.asarray(img).clip(-1, 1) * 0.5 + 0.5,
-                (res//2, res//2), cv2.INTER_AREA)
+                (res // 2, res // 2), cv2.INTER_AREA)
             wss[idx] = ws
         else:
             seed = history[f'seed{idx}']
         seeds += [seed]
-
         history[f'seed{idx}'] = seed
+
     history['trunc'] = trunc
     history['model_name'] = model_name
+    history['wss'] = wss
     gr.set_state(history)
     set_random_seed(sum(seeds))
 
-    # style mixing (?)
     ws1, ws2 = [torch.from_numpy(ws).to(device) for ws in wss]
     ws = ws1.clone()
     ws[:, :8] = ws1[:, :8] * mix1 + ws2[:, :8] * (1 - mix1)
@@ -146,12 +142,12 @@ def f_synthesis(model_name, model_find, render_option, trunc, seed1, seed2, mix1
     with torch.no_grad():
         cam = get_camera_traj(model, pitch, yaw, fov, model_name=model_name)
         image = model.get_final_output(
-            styles=ws, camera_matrices=cam, 
+            styles=ws, camera_matrices=cam,
             theta=roll * np.pi,
             render_option=render_option)
     end_t = time.time()
 
-    image = image[0].permute(1,2,0).detach().cpu().numpy().clip(-1, 1) * 0.5 + 0.5
+    image = image[0].permute(1, 2, 0).detach().cpu().numpy().clip(-1, 1) * 0.5 + 0.5
 
     if imgs.shape[0] == image.shape[0]:
         image = np.concatenate([imgs, image], 1)
@@ -160,7 +156,7 @@ def f_synthesis(model_name, model_find, render_option, trunc, seed1, seed2, mix1
         b = int(imgs.shape[1] / imgs.shape[0] * a)
         print(f'resize {a} {b} {image.shape} {imgs.shape}')
         image = np.concatenate([cv2.resize(imgs, (b, a), cv2.INTER_AREA), image], 1)
-  
+
     print(f'rendering time = {end_t-start_t:.4f}s')
     return (image * 255).astype('uint8')
 
