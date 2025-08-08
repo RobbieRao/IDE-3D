@@ -13,7 +13,7 @@ import numpy as np
 import qdarkstyle
 import torch
 from PIL import Image
-from PyQt5.QtCore import QCoreApplication, QDir, Qt, QSize
+from PyQt5.QtCore import QCoreApplication, QDir, Qt, QSize, pyqtSlot
 from PyQt5.QtGui import QColor, QImage, QPixmap
 from PyQt5.QtWidgets import (QApplication, QColorDialog, QFileDialog,
                              QGraphicsScene, QMainWindow, QMessageBox, QWidget)
