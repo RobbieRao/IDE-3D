@@ -40,6 +40,11 @@ python gen_videos.py --outdir=out --trunc=0.7 --seeds=0-3 --grid=1x1 \
     --network=pretrained_models/ide3d-ffhq-64-512.pkl --interpolate 1 --image_mode image_seg
 ```
 
+The video generation relies on the FFMPEG backend provided by
+``imageio-ffmpeg``.  If you encounter errors about an unexpected ``fps``
+argument coming from a TIFF writer, install the plugin with
+``pip install imageio-ffmpeg``.
+
 Launch the interactive UI (after installing `Painter/requirements.txt`):
 
 ```bash
@@ -47,6 +52,10 @@ python Painter/run_ui.py \
     --g_ckpt pretrained_models/ide3d-ffhq-64-512.pkl \
     --e_ckpt pretrained_models/encoder-base-hybrid.pkl
 ```
+
+The UI is implemented with PyQt5.  Make sure to install the dependencies in
+``Painter/requirements.txt``; the script now explicitly imports ``pyqtSlot`` to
+avoid runtime errors.
 
 
 ## Semantic-aware image synthesis
