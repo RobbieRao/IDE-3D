@@ -13,7 +13,7 @@ import numpy as np
 import qdarkstyle
 import torch
 from PIL import Image
-from PyQt5.QtCore import QCoreApplication, QDir, Qt, QSize
+from PyQt5.QtCore import QCoreApplication, QDir, Qt, QSize, pyqtSlot
 from PyQt5.QtGui import QColor, QImage, QPixmap
 from PyQt5.QtWidgets import (
     QApplication,
@@ -25,15 +25,6 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 from torchvision import transforms, utils
-
-try:  # Some environments may omit ``pyqtSlot``
-    from PyQt5.QtCore import pyqtSlot
-except Exception:  # pragma: no cover - provides graceful fallback
-    def pyqtSlot(*args, **kwargs):  # type: ignore
-        def decorator(func):
-            return func
-
-        return decorator
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 import dnnlib
