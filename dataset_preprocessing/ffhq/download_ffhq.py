@@ -92,9 +92,16 @@ def download_file(session, file_spec, stats, chunk_size=128, num_attempts=10):
                         raise IOError('Incorrect pixel MD5', file_path)
             break
 
-        except:
+        except Exception as err:
             with stats['lock']:
                 stats['bytes_done'] -= data_size
+
+            # Always attempt to remove the temporary file on failure.
+            try:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+            except OSError:
+                pass
 
             # Handle known failure cases.
             if data_size > 0 and data_size < 8192:
@@ -104,19 +111,32 @@ def download_file(session, file_spec, stats, chunk_size=128, num_attempts=10):
 
                 # Google Drive virus checker nag.
                 links = [html.unescape(link) for link in data_str.split('"') if 'export=download' in link]
-                if len(links) == 1:
-                    if attempts_left:
-                        file_url = requests.compat.urljoin(file_url, links[0])
-                        continue
+                if len(links) == 1 and attempts_left:
+                    file_url = requests.compat.urljoin(file_url, links[0])
+                    continue
 
                 # Google Drive quota exceeded.
-                if 'Google Drive - Quota exceeded' in data_str:
-                    if not attempts_left:
-                        raise IOError("Google Drive download quota exceeded -- please try again later")
+                if 'Google Drive - Quota exceeded' in data_str and not attempts_left:
+                    raise IOError("Google Drive download quota exceeded -- please try again later")
 
-            # Last attempt => raise error.
+            # Last attempt => raise descriptive error and clean up.
             if not attempts_left:
-                raise
+                try:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                except OSError:
+                    pass
+                for filename in glob.glob(file_path + '.tmp.*'):
+                    try:
+                        os.remove(filename)
+                    except OSError:
+                        pass
+                expected = file_spec.get('file_size', 'unknown')
+                raise IOError(
+                    f"Download incomplete for {file_path}: "
+                    f"expected {expected} bytes but received {data_size}. "
+                    "Please check your internet connection and try again."
+                ) from err
 
     # Rename temp file to the correct name.
     os.replace(tmp_path, file_path) # atomic
@@ -154,8 +174,25 @@ def format_time(seconds):
 
 def download_files(file_specs, num_threads=32, status_delay=0.2, timing_window=50, **download_kwargs):
 
-    # Determine which files to download.
-    done_specs = {spec['file_path']: spec for spec in file_specs if os.path.isfile(spec['file_path'])}
+    # Determine which files to download. Remove corrupted partial downloads.
+    done_specs = {}
+    for spec in file_specs:
+        path = spec['file_path']
+        if os.path.isfile(path):
+            size_ok = 'file_size' not in spec or os.path.getsize(path) == spec['file_size']
+            if size_ok:
+                done_specs[path] = spec
+            else:
+                print(f'Removing incomplete file {path}')
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+                for filename in glob.glob(path + '.tmp.*'):
+                    try:
+                        os.remove(filename)
+                    except OSError:
+                        pass
     missing_specs = [spec for spec in file_specs if spec['file_path'] not in done_specs]
     files_total = len(file_specs)
     bytes_total = sum(spec['file_size'] for spec in file_specs)
