@@ -1,4 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtGui import QIcon
 from .util import number_color
 from functools import partial
 import glob
