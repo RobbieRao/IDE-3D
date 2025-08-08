@@ -96,6 +96,12 @@ def download_file(session, file_spec, stats, chunk_size=128, num_attempts=10):
             with stats['lock']:
                 stats['bytes_done'] -= data_size
 
+            # Handle known failure cases.
+            data_str = None
+            if data_size > 0 and data_size < 8192 and os.path.exists(tmp_path):
+                with open(tmp_path, 'rb') as f:
+                    data_str = f.read().decode('utf-8')
+
             # Always attempt to remove the temporary file on failure.
             try:
                 if os.path.exists(tmp_path):
@@ -103,12 +109,7 @@ def download_file(session, file_spec, stats, chunk_size=128, num_attempts=10):
             except OSError:
                 pass
 
-            # Handle known failure cases.
-            if data_size > 0 and data_size < 8192:
-                with open(tmp_path, 'rb') as f:
-                    data = f.read()
-                data_str = data.decode('utf-8')
-
+            if data_str is not None:
                 # Google Drive virus checker nag.
                 links = [html.unescape(link) for link in data_str.split('"') if 'export=download' in link]
                 if len(links) == 1 and attempts_left:
