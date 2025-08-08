@@ -63,7 +63,22 @@ def create_samples(N=256, voxel_origin=[0, 0, 0], cube_length=2.0):
 
 #----------------------------------------------------------------------------
 
-def gen_interp_video(G, mp4: str, seeds, shuffle_seed=None, w_frames=60*4, kind='cubic', grid_dims=(1,1), num_keyframes=None, wraps=2, psi=1, truncation_cutoff=14, cfg='FFHQ', image_mode='image', gen_shapes=False, device=torch.device('cuda'), **video_kwargs):
+def gen_interp_video(G, mp4: str, seeds, shuffle_seed=None, w_frames=60*4, kind='cubic', grid_dims=(1,1), num_keyframes=None, wraps=2, psi=1, truncation_cutoff=14, cfg='FFHQ', image_mode='image', gen_shapes=False, device=None, **video_kwargs):
+    """Render an interpolation video between latent vectors.
+
+    The original implementation assumed a CUDA device was always available and
+    let ``imageio`` auto-select the video backend.  On systems without
+    ``imageio-ffmpeg`` installed, this could cause the TIFF writer to be used
+    which does not understand the ``fps`` argument, leading to ``TypeError``.
+
+    This function now gracefully falls back to CPU when CUDA is unavailable and
+    explicitly requests the FFMPEG writer to ensure that the ``fps`` argument is
+    handled correctly.
+    """
+
+    if device is None:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
     grid_w = grid_dims[0]
     grid_h = grid_dims[1]
 
@@ -105,7 +120,11 @@ def gen_interp_video(G, mp4: str, seeds, shuffle_seed=None, w_frames=60*4, kind=
     # Render video.
     max_batch = 10000000
     voxel_resolution = 512
-    video_out = imageio.get_writer(mp4, mode='I', fps=60, codec='libx264', **video_kwargs)
+    # Use the FFMPEG writer explicitly to avoid selecting a TIFF writer that
+    # does not accept the ``fps`` argument.
+    video_out = imageio.get_writer(
+        mp4, mode='I', fps=60, codec='libx264', format='FFMPEG', **video_kwargs
+    )
 
     if gen_shapes:
         outdir = 'interpolation_{}_{}/'.format(all_seeds[0], all_seeds[1])
@@ -221,9 +240,9 @@ def generate_images(
     """
 
     print('Loading networks from "%s"...' % network_pkl)
-    device = torch.device('cuda')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     with dnnlib.util.open_url(network_pkl) as f:
-        G = legacy.load_network_pkl(f)['G_ema'].to(device) # type: ignore
+        G = legacy.load_network_pkl(f)['G_ema'].to(device).eval() # type: ignore
 
     if truncation_cutoff == 0:
         truncation_psi = 1.0 # truncation cutoff of 0 means no truncation anyways
@@ -233,12 +252,12 @@ def generate_images(
     os.makedirs(outdir, exist_ok=True)
     if interpolate:
         output = os.path.join(outdir, 'interpolation.mp4')
-        gen_interp_video(G=G, mp4=output, bitrate='10M', grid_dims=grid, num_keyframes=num_keyframes, w_frames=w_frames, seeds=seeds, shuffle_seed=shuffle_seed, psi=truncation_psi, truncation_cutoff=truncation_cutoff, cfg=cfg, image_mode=image_mode, gen_shapes=shapes)
+        gen_interp_video(G=G, mp4=output, bitrate='10M', grid_dims=grid, num_keyframes=num_keyframes, w_frames=w_frames, seeds=seeds, shuffle_seed=shuffle_seed, psi=truncation_psi, truncation_cutoff=truncation_cutoff, cfg=cfg, image_mode=image_mode, gen_shapes=shapes, device=device)
     else:
         for seed in seeds:
             output = os.path.join(outdir, f'{seed}.mp4')
             seeds_ = [seed]
-            gen_interp_video(G=G, mp4=output, bitrate='10M', grid_dims=grid, num_keyframes=num_keyframes, w_frames=w_frames, seeds=seeds_, shuffle_seed=shuffle_seed, psi=truncation_psi, truncation_cutoff=truncation_cutoff, cfg=cfg, image_mode=image_mode)
+            gen_interp_video(G=G, mp4=output, bitrate='10M', grid_dims=grid, num_keyframes=num_keyframes, w_frames=w_frames, seeds=seeds_, shuffle_seed=shuffle_seed, psi=truncation_psi, truncation_cutoff=truncation_cutoff, cfg=cfg, image_mode=image_mode, device=device)
 
 #----------------------------------------------------------------------------
 

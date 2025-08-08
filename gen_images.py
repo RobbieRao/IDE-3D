@@ -77,9 +77,9 @@ def generate_images(
     """Generate multi-viewed images and semantic masks using pretrained network pickle.
     """
     print('Loading networks from "%s"...' % network_pkl)
-    device = torch.device('cuda')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     with dnnlib.util.open_url(network_pkl) as f:
-        G = legacy.load_network_pkl(f)['G_ema'].to(device) # type: ignore
+        G = legacy.load_network_pkl(f)['G_ema'].to(device).eval() # type: ignore
 
     os.makedirs(outdir, exist_ok=True)
 
@@ -89,27 +89,28 @@ def generate_images(
         torch.manual_seed(seed)
         print('Generating image for seed %d (%d/%d) ...' % (seed, seed_idx, len(seeds)))
         z = torch.from_numpy(np.random.RandomState(seed).randn(1, G.z_dim)).to(device)
-        ws = G.mapping(z=z, c=cs, truncation_psi=truncation_psi)
-        yaws = [-0.5, 0, 0.5]
-        imgs, segs = [], []
-        for k, yaw in enumerate(yaws):
-            render_params = {
-                "h_mean": yaw+math.pi*0.5,
-                "v_mean": math.pi * 0.5,
-                "h_stddev": 0.,
-                "v_stddev": 0.,
-                "fov": 18,
-                "num_steps": 96, 
-            }
-            camera_points, phi, theta = sample_camera_positions(device, n=1, r=2.7, horizontal_mean=yaw+math.pi*0.5, vertical_mean=math.pi * 0.5, mode=None)
-            c = create_cam2world_matrix(-camera_points, camera_points, device=device)
-            c = c.reshape(1,-1)
-            c = torch.cat((c, torch.tensor([4.2647, 0, 0.5, 0, 4.2647, 0.5, 0, 0, 1]).reshape(1, -1).to(c)), -1)
+        with torch.no_grad():
+            ws = G.mapping(z=z, c=cs, truncation_psi=truncation_psi)
+            yaws = [-0.5, 0, 0.5]
+            imgs, segs = [], []
+            for k, yaw in enumerate(yaws):
+                render_params = {
+                    "h_mean": yaw+math.pi*0.5,
+                    "v_mean": math.pi * 0.5,
+                    "h_stddev": 0.,
+                    "v_stddev": 0.,
+                    "fov": 18,
+                    "num_steps": 96,
+                }
+                camera_points, phi, theta = sample_camera_positions(device, n=1, r=2.7, horizontal_mean=yaw+math.pi*0.5, vertical_mean=math.pi * 0.5, mode=None)
+                c = create_cam2world_matrix(-camera_points, camera_points, device=device)
+                c = c.reshape(1,-1)
+                c = torch.cat((c, torch.tensor([4.2647, 0, 0.5, 0, 4.2647, 0.5, 0, 0, 1]).reshape(1, -1).to(c)), -1)
 
-            img, seg = G.synthesis(ws, c=c, render_params=render_params, noise_mode=noise_mode, return_seg=True)
-            seg = (mask2color(seg) / 255. - 0.5) / 0.5 # (0, 255) -> (-1, 1) 
-            imgs.append(img)
-            segs.append(seg)
+                img, seg = G.synthesis(ws, c=c, render_params=render_params, noise_mode=noise_mode, return_seg=True)
+                seg = (mask2color(seg) / 255. - 0.5) / 0.5 # (0, 255) -> (-1, 1)
+                imgs.append(img)
+                segs.append(seg)
         imgs = torch.cat(imgs)
         segs = torch.cat(segs)
         save_image(imgs, f'{outdir}/seed{seed:04d}.png', normalize=True, range=(-1, 1))
