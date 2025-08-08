@@ -73,7 +73,17 @@ def render(fname, size, sigma_threshold, w_frames, outdir):
     
 
 def img2video(img_list, mp4):
-    video_out = imageio.get_writer(mp4, mode='I', fps=60, codec='libx264', bitrate='10M')
+    """Save a sequence of images as an MP4 video using FFMPEG.
+
+    Explicitly requesting the FFMPEG backend avoids ``imageio`` falling back to
+    the TIFF writer, which does not understand the ``fps`` argument and would
+    otherwise raise ``TypeError: write() got an unexpected keyword argument
+    'fps'``.
+    """
+
+    video_out = imageio.get_writer(
+        mp4, mode='I', fps=60, codec='libx264', bitrate='10M', format='FFMPEG'
+    )
     for img in img_list:
         frame = cv2.imread(img)
         video_out.append_data(frame)
