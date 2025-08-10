@@ -332,9 +332,10 @@ class Ex(QWidget, Ui_Form):
 
     @pyqtSlot()
     def open(self):
-
-        fileName, _ = QFileDialog.getOpenFileName(self, "Open File", 'F:/Lab/samples')
-        if fileName:
+        try:
+            fileName, _ = QFileDialog.getOpenFileName(self, "Open File", 'F:/Lab/samples')
+            if not fileName:
+                return
 
             self.mat_img_path = os.path.join(fileName)
             self.fileName = fileName
@@ -343,8 +344,7 @@ class Ex(QWidget, Ui_Form):
             # USE CV2 read images, because of using gray scale images, no matter the RGB orders
             mat_img = cv2.imread(self.mat_img_path, -1)
             if mat_img is None:
-                QMessageBox.information(self, "Image Viewer",
-                                        "Cannot load %s." % fileName)
+                QMessageBox.information(self, "Image Viewer", "Cannot load %s." % fileName)
                 return
 
             if mat_img.ndim == 2:
@@ -360,65 +360,66 @@ class Ex(QWidget, Ui_Form):
             image = self.image + (self.segmap2rgb(self.id_remap(self.mat_img)) * int(1000 * (1.0 - self.alpha)) // 1000).astype('uint8')
             image = QPixmap.fromImage(QImage(image.data.tobytes(), self.image.shape[1], self.image.shape[0], QImage.Format_RGB888))
 
-
             self.scene.reset()
             if len(self.scene.items()) > 0:
                 self.scene.reset_items()
 
             self.scene_image_pts = self.scene.addPixmap(image)
 
-            if mat_img.ndim == 2: # template
+            if mat_img.ndim == 2:  # template
                 self.update_segmap_vis(self.mat_img)
+        except Exception as e:
+            QMessageBox.critical(self, "Open Image Failed", str(e))
 
     @pyqtSlot()
     def open_random(self):
+        try:
+            style = np.random.randint(1000000)
+            z = torch.from_numpy(np.random.RandomState(style).randn(1, self.generator.z_dim).astype('float32')).cuda()
+            c_cond = torch.tensor([1,0,0,0, 0,1,0,0, 0,0,1,2.7, 0,0,0,1, 4.2647, 0, 0.5, 0, 4.2647, 0.5, 0, 0, 1]).float().cuda().reshape(1,-1)
+            w = self.generator.mapping(z, c_cond)
+            ### camera pose
+            camera_points, phi, theta = sample_camera_positions('cuda', n=1, r=2.7, horizontal_mean=0.5*math.pi,
+                                                            vertical_mean=0.5*math.pi, horizontal_stddev=0.3, vertical_stddev=0.155, mode='gaussian')
+            self.yaw = theta
+            self.pitch = phi
+            self.yaw_orig = theta
+            self.pitch_orig = phi
+            c = create_cam2world_matrix(-camera_points, camera_points, device='cuda')
+            c = c.reshape(1,-1)
+            c = torch.cat((c, torch.tensor([4.2647, 0, 0.5, 0, 4.2647, 0.5, 0, 0, 1]).reshape(1, -1).to(c)), -1)
+            gen_img = self.generator.synthesis(w, c=c, noise_mode='const')
+            _, rec_seg = self.parsing_img(self.bisNet, gen_img, remap=True, return_mask=False)
+            mat_img = rec_seg[0, 0].detach().cpu().numpy().astype(np.uint8)
+            fileName = f"synthetic_seed_{style}.png"
 
-        style = np.random.randint(1000000)
-        z = torch.from_numpy(np.random.RandomState(style).randn(1, self.generator.z_dim).astype('float32')).cuda()
-        c_cond = torch.tensor([1,0,0,0, 0,1,0,0, 0,0,1,2.7, 0,0,0,1, 4.2647, 0, 0.5, 0, 4.2647, 0.5, 0, 0, 1]).float().cuda().reshape(1,-1)
-        w = self.generator.mapping(z, c_cond)
-        ### camera pose 
-        camera_points, phi, theta = sample_camera_positions('cuda', n=1, r=2.7, horizontal_mean=0.5*math.pi, 
-                                                        vertical_mean=0.5*math.pi, horizontal_stddev=0.3, vertical_stddev=0.155, mode='gaussian')
-        self.yaw = theta
-        self.pitch = phi
-        self.yaw_orig = theta
-        self.pitch_orig = phi
-        c = create_cam2world_matrix(-camera_points, camera_points, device='cuda')
-        c = c.reshape(1,-1)
-        c = torch.cat((c, torch.tensor([4.2647, 0, 0.5, 0, 4.2647, 0.5, 0, 0, 1]).reshape(1, -1).to(c)), -1)
-        # self.synthetic_label = c
-        gen_img = self.generator.synthesis(w, c=c, noise_mode='const')
-        _, rec_seg = self.parsing_img(self.bisNet, gen_img, remap=True, return_mask=False)
-        mat_img = rec_seg[0, 0].detach().cpu().numpy().astype(np.uint8)
-        fileName = f"synthetic_seed_{style}.png"
+            self.mat_img_path = os.path.join(fileName)
+            self.fileName = fileName
+            print(self.mat_img_path)
 
-        self.mat_img_path = os.path.join(fileName)
-        self.fileName = fileName
-        print(self.mat_img_path)
+            # USE CV2 read images, because of using gray scale images, no matter the RGB orders
+            if mat_img.ndim == 2:
+                self.mat_img = cv2.resize(mat_img, (512, 512), interpolation=cv2.INTER_NEAREST)
+                print("mat image shape", self.mat_img.shape)
+                self.image = self.segmap2rgb(self.id_remap(self.mat_img))
+                self.mat_img_org = self.mat_img.copy()
+            else:
+                self.image = cv2.resize(mat_img[...,::-1], (512, 512))
 
-        # USE CV2 read images, because of using gray scale images, no matter the RGB orders
-        if mat_img.ndim == 2:
-            self.mat_img = cv2.resize(mat_img, (512, 512), interpolation=cv2.INTER_NEAREST)
-            print("mat image shape", self.mat_img.shape)
-            self.image = self.segmap2rgb(self.id_remap(self.mat_img))
-            self.mat_img_org = self.mat_img.copy()
-        else:
-            self.image = cv2.resize(mat_img[...,::-1], (512, 512))
+            self.image_raw = self.image.copy()
+            self.image = np.round(self.alpha*self.image).astype('uint8')
+            image = self.image + (self.segmap2rgb(self.id_remap(self.mat_img)) * int(1000 * (1.0 - self.alpha)) // 1000).astype('uint8')
+            image = QPixmap.fromImage(QImage(image.data.tobytes(), self.image.shape[1], self.image.shape[0], QImage.Format_RGB888))
 
-        self.image_raw = self.image.copy()
-        self.image = np.round(self.alpha*self.image).astype('uint8')
-        image = self.image + (self.segmap2rgb(self.id_remap(self.mat_img)) * int(1000 * (1.0 - self.alpha)) // 1000).astype('uint8')
-        image = QPixmap.fromImage(QImage(image.data.tobytes(), self.image.shape[1], self.image.shape[0], QImage.Format_RGB888))
+            self.scene.reset()
+            if len(self.scene.items()) > 0:
+                self.scene.reset_items()
+            self.scene_image_pts = self.scene.addPixmap(image)
 
-
-        self.scene.reset()
-        if len(self.scene.items()) > 0:
-            self.scene.reset_items()
-        self.scene_image_pts = self.scene.addPixmap(image)
-
-        if mat_img.ndim == 2: # template
-            self.update_segmap_vis(self.mat_img)
+            if mat_img.ndim == 2:  # template
+                self.update_segmap_vis(self.mat_img)
+        except Exception as e:
+            QMessageBox.critical(self, "Open Random Failed", str(e))
 
     @pyqtSlot()
     def open_reference(self):
@@ -570,22 +571,36 @@ class Ex(QWidget, Ui_Form):
 
     @pyqtSlot()
     def save_img(self):
+        try:
+            base_name = os.path.basename(getattr(self, 'fileName', 'session'))
+            if base_name.endswith('.png') or base_name.endswith('.jpg'):
+                base_name = base_name[:-4]
+            ui_result_folder = os.path.join('./ui_results', base_name)
 
-        ui_result_folder = './ui_results/' + os.path.basename(self.fileName)[:-4]
+            os.makedirs(ui_result_folder, exist_ok=True)
 
-        os.makedirs(ui_result_folder,exist_ok=True)
+            outName = os.path.join(
+                ui_result_folder,
+                datetime.datetime.now().strftime('%m%d%H%M%S') + '_segmap.png'
+            )
+            cv2.imwrite(outName, getattr(self, 'mat_img', np.zeros((512, 512), np.uint8)))
+            print('===> save segmap to %s' % outName)
 
-        outName = os.path.join(ui_result_folder,datetime.datetime.now().strftime('%m%d%H%M%S') + '_segmap.png')
-        cv2.imwrite(outName, self.mat_img)
-        print('===> save segmap to %s'%outName)
+            if self.fake_img is not None:
+                outName = os.path.join(
+                    ui_result_folder,
+                    datetime.datetime.now().strftime('%m%d%H%M%S') + '_render.png'
+                )
+                utils.save_image(self.fake_img.detach().cpu(), outName, normalize=True, range=(-1, 1))
 
-        if self.fake_img is not None:
-            outName = os.path.join(ui_result_folder,datetime.datetime.now().strftime('%m%d%H%M%S') + '_render.png')
-            utils.save_image(self.fake_img.detach().cpu(), outName, normalize=True, range=(-1,1))
-
-        if self.w is not None:
-            outName = os.path.join(ui_result_folder,datetime.datetime.now().strftime('%m%d%H%M%S') + '_ws.pt')
-            torch.save(self.w, outName)
+            if self.w is not None:
+                outName = os.path.join(
+                    ui_result_folder,
+                    datetime.datetime.now().strftime('%m%d%H%M%S') + '_ws.pt'
+                )
+                torch.save(self.w, outName)
+        except Exception as e:
+            QMessageBox.critical(self, "Save Image Failed", str(e))
             
 
 

@@ -81,6 +81,8 @@ class Ui_Form(object):
 
         self.add_pitch_bar(Form)
 
+        self.add_instruction_label(Form)
+
         QtCore.QMetaObject.connectSlotsByName(Form)
 
     def retranslateUi(self, Form):
@@ -134,6 +136,18 @@ class Ui_Form(object):
         self.brushSlider.setMaximum(100)
         self.brushSlider.setValue(6)
         self.brushSlider.valueChanged.connect(Form.change_brush_size)
+
+    def add_instruction_label(self, Form):
+        """Display basic interaction instructions."""
+        self.instructionsLabel = QtWidgets.QLabel(Form)
+        self.instructionsLabel.setObjectName("instructionsLabel")
+        self.instructionsLabel.setGeometry(QtCore.QRect(100, 720, 1400, 20))
+        self.instructionsLabel.setText(
+            "Instructions: Use 'Open Image' to load a file or 'Open Random' to sample one. 'Save Img' stores your edits." 
+        )
+        font = self.instructionsLabel.font()
+        font.setPointSize(10)
+        self.instructionsLabel.setFont(font)
 
     def add_yaw_bar(self, Form):
         self.yawLabel = QtWidgets.QLabel(Form)
