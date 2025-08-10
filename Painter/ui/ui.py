@@ -58,6 +58,12 @@ class Ui_Form(object):
         # self.add_checkbox_widgets(Form)
         self.add_update_img_button(Form)
 
+        # interaction instructions
+        self.infoLabel = QtWidgets.QLabel(Form)
+        self.infoLabel.setGeometry(QtCore.QRect(100, 110, 600, 20))
+        self.infoLabel.setObjectName("infoLabel")
+        self.infoLabel.setWordWrap(True)
+
 
         # self.referDialog = ReferenceDialog(self)
         # self.referDialog.setObjectName('Reference Dialog')
@@ -93,6 +99,7 @@ class Ui_Form(object):
         self.pushButton_5.setText(_translate("Form", "Open Random"))
 
         self.saveImg.setText(_translate("Form", "Save Img"))
+        self.infoLabel.setText(_translate("Form", "Open Image to load data, Open Random to synthesize a sample, and Save Img to export results."))
 
     def add_alpha_bar(self, Form):
         self.alphaLabel = QtWidgets.QLabel(Form)
@@ -292,32 +299,37 @@ class Ui_Form(object):
         self.pushButton.setGeometry(QtCore.QRect(Tb_x - 1 * Lb_row_shift - 45, Tb_y, Tb_width, Tb_height))
         self.pushButton.setObjectName("pushButton")
         self.pushButton.clicked.connect(Form.open)
+        self.pushButton.setToolTip("Open an image file")
 
         self.pushButton_2 = QtWidgets.QPushButton(Form)
         self.pushButton_2.setGeometry(QtCore.QRect(Tb_x - 1 * Lb_row_shift - 45 + 1 * Tb_row_shift + 1 * Tb_width, Tb_y, Tb_width, Tb_height))
         self.pushButton_2.setObjectName("pushButton_2")
-
         self.pushButton_2.clicked.connect(Form.startScreening)
+        self.pushButton_2.setToolTip("Start screening")
 
 
         self.pushButton_3 = QtWidgets.QPushButton(Form)
         self.pushButton_3.setGeometry(QtCore.QRect(Tb_x  - 1 * Lb_row_shift - 45+ 2 * Tb_row_shift + 2 * Tb_width, Tb_y, Tb_width, Tb_height))
         self.pushButton_3.setObjectName("pushButton_3")
         self.pushButton_3.clicked.connect(Form.saveScreening)
+        self.pushButton_3.setToolTip("Save screening results")
 
         self.pushButton_4 = QtWidgets.QPushButton(Form)
         self.pushButton_4.setGeometry(QtCore.QRect(Tb_x  - 1 * Lb_row_shift - 45+ 3 * Tb_row_shift + 3 * Tb_width, Tb_y, Tb_width, Tb_height))
         self.pushButton_4.setObjectName("pushButton_4")
+        self.pushButton_4.setToolTip("Choose drawing color")
 
         self.saveImg = QtWidgets.QPushButton(Form)
         self.saveImg.setGeometry(QtCore.QRect(Tb_x  - 1 * Lb_row_shift - 45+ 4 * Tb_row_shift + 4 * Tb_width, Tb_y, Tb_width, Tb_height))
         self.saveImg.setObjectName("saveImg")
         self.saveImg.clicked.connect(Form.save_img)
+        self.saveImg.setToolTip("Save current results")
 
         self.pushButton_5 = QtWidgets.QPushButton(Form)
         self.pushButton_5.setGeometry(QtCore.QRect(Tb_x - 1 * Lb_row_shift - 45 + 5 * Tb_row_shift + 5 * Tb_width, Tb_y, Tb_width, Tb_height))
         self.pushButton_5.setObjectName("pushButton_5")
         self.pushButton_5.clicked.connect(Form.open_random)
+        self.pushButton_5.setToolTip("Generate a random example")
 
         self.retranslateUi(Form)
 
@@ -331,6 +343,7 @@ class Ui_Form(object):
         self.newButton.setIcon(QIcon('Painter/icons/add_new_document.png'))
         self.newButton.setIconSize(QSize(60, 60))
         self.newButton.clicked.connect(Form.init_screen)
+        self.newButton.setToolTip("Start a new session")
 
         self.openButton = QtWidgets.QPushButton(Form)
         self.openButton.setGeometry(QtCore.QRect(int(Lb_x - 1 * Lb_row_shift - 60), 140 + 60*1 + 10*1, 60, 60))
@@ -338,6 +351,7 @@ class Ui_Form(object):
         self.openButton.setIcon(QIcon('Painter/icons/open.png'))
         self.openButton.setIconSize(QSize(60, 60))
         self.openButton.clicked.connect(Form.open_reference)
+        self.openButton.setToolTip("Open a reference image")
 
 
 
@@ -347,6 +361,7 @@ class Ui_Form(object):
         self.fillButton.setIcon(QIcon('Painter/icons/paint_can.png'))
         self.fillButton.setIconSize(QSize(60, 60))
         self.fillButton.clicked.connect(partial(Form.mode_select, 2))
+        self.fillButton.setToolTip("Fill region with selected label")
 
 
         self.brushButton = QtWidgets.QPushButton(Form)
@@ -357,6 +372,7 @@ class Ui_Form(object):
         self.brushButton.setStyleSheet("background-color: #85adad")
         #self.brushButton.setStyleSheet("background-color:")
         self.brushButton.clicked.connect(partial(Form.mode_select, 0))
+        self.brushButton.setToolTip("Brush painting mode")
 
 
         self.recButton = QtWidgets.QPushButton(Form)
@@ -365,6 +381,7 @@ class Ui_Form(object):
         self.recButton.setIcon(QIcon('Painter/icons/brush_square.png'))
         self.recButton.setIconSize(QSize(60, 60))
         self.recButton.clicked.connect(partial(Form.mode_select, 1))
+        self.recButton.setToolTip("Rectangle selection mode")
 
 
 
@@ -374,6 +391,7 @@ class Ui_Form(object):
         self.undoButton.setIcon(QIcon('Painter/icons/undo.png'))
         self.undoButton.setIconSize(QSize(60, 60))
         self.undoButton.clicked.connect(Form.undo)
+        self.undoButton.setToolTip("Undo last action")
 
         self.saveButton = QtWidgets.QPushButton(Form)
         self.saveButton.setGeometry(QtCore.QRect(int(Lb_x - 1 * Lb_row_shift - 60), 140 + 60 * 6 + 10 * 6, 60, 60))
@@ -381,6 +399,7 @@ class Ui_Form(object):
         self.saveButton.setIcon(QIcon('Painter/icons/add_new_document.png'))
         self.saveButton.setIconSize(QSize(60, 60))
         self.saveButton.clicked.connect(Form.cleanForground)
+        self.saveButton.setToolTip("Clear current drawing")
 
 
     def add_style_imgs_buttons(self, Form):
